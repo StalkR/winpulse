@@ -68,17 +68,22 @@ func onReady(ctx context.Context) {
 	}()
 
 	for {
-		ctx, cancel := context.WithCancel(ctx)
-		var g errgroup.Group
+		g, ctx := errgroup.WithContext(ctx)
 		g.Go(func() error {
 			return start(ctx)
 		})
-		systray.SetIcon(icon.Color)
-		stop.Show()
-		<-stop.ClickedCh
-		stop.Hide()
-		cancel()
-		if err := g.Wait(); err != nil {
+		g.Go(func() error {
+			systray.SetIcon(icon.Color)
+			stop.Show()
+			select {
+			case <-stop.ClickedCh:
+				stop.Hide()
+				return errStop
+			case <-ctx.Done():
+				return nil
+			}
+		})
+		if err := g.Wait(); err != nil && err != errStop {
 			log.Fatal(err)
 		}
 		log.Print("Stopped")
@@ -94,8 +99,12 @@ func start(ctx context.Context) error {
 	parentCtx := ctx
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		<-parentCtx.Done()
-		return errStop
+		select {
+		case <-parentCtx.Done():
+			return errStop
+		case <-ctx.Done():
+			return nil
+		}
 	})
 
 	r, w := io.Pipe()
