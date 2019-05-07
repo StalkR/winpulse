@@ -16,7 +16,7 @@ import (
 )
 
 // Capture captures local audio and writes it to the sink.
-// Format is float32 little-endian, stereo, sampling 44100 Hz.
+// Format is float32 little-endian, stereo 16-bit 44100 Hz (CD Quality).
 func Capture(ctx context.Context, sink io.Writer) error {
   if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
     return err
@@ -49,7 +49,16 @@ func Capture(ctx context.Context, sink io.Writer) error {
 
   const WAVE_FORMAT_EXTENSIBLE = 0xfffe // float32 little-endian
   if wfx.WFormatTag != WAVE_FORMAT_EXTENSIBLE {
-    return fmt.Errorf("expected WAVE_FORMAT_EXTENSIBLE but got %v", wfx.WFormatTag)
+    return fmt.Errorf("format: expected WAVE_FORMAT_EXTENSIBLE but got %v", wfx.WFormatTag)
+  }
+  if channels := uint16(2); wfx.NChannels != channels {
+    return fmt.Errorf("format: expected %v channels but got %v", channels, wfx.NChannels)
+  }
+  if bits := uint16(16); wfx.WBitsPerSample/wfx.NChannels != bits {
+    return fmt.Errorf("format: expected %v-bit but got %v-bit", bits, wfx.WBitsPerSample)
+  }
+  if freq := uint32(44100); wfx.NSamplesPerSec != freq {
+    return fmt.Errorf("format: expected %v Hz but got %v Hz", freq, wfx.NSamplesPerSec)
   }
 
   var defaultPeriod wca.REFERENCE_TIME
