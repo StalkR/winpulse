@@ -84,7 +84,7 @@ func onReady(ctx context.Context) {
 			}
 		})
 		if err := g.Wait(); err != nil && err != errStop {
-			log.Fatal(err)
+			log.Printf("error: %v", err)
 		}
 		log.Print("Stopped")
 		systray.SetTooltip("Stopped")
