@@ -68,16 +68,15 @@ func onReady(ctx context.Context) {
 	}()
 
 	for {
+		systray.SetIcon(icon.Color)
+		stop.Show()
 		g, ctx := errgroup.WithContext(ctx)
 		g.Go(func() error {
 			return start(ctx)
 		})
 		g.Go(func() error {
-			systray.SetIcon(icon.Color)
-			stop.Show()
 			select {
 			case <-stop.ClickedCh:
-				stop.Hide()
 				return errStop
 			case <-ctx.Done():
 				return nil
@@ -86,6 +85,7 @@ func onReady(ctx context.Context) {
 		if err := g.Wait(); err != nil && err != errStop {
 			log.Printf("error: %v", err)
 		}
+		stop.Hide()
 		log.Print("Stopped")
 		systray.SetTooltip("Stopped")
 		systray.SetIcon(icon.Gray)
