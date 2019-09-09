@@ -110,7 +110,16 @@ func start(ctx context.Context) error {
 	r, w := io.Pipe()
 	g.Go(func() error {
 		defer w.Close()
-		return winaudio.Capture(ctx, w)
+		for ; ; time.Sleep(time.Second) {
+			if err := winaudio.Capture(ctx, w); err != nil {
+				log.Printf("error: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+		}
 	})
 
 	g.Go(func() error {
