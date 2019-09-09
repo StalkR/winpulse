@@ -8,13 +8,15 @@ It can stream with native protocol or over SSH with pacat.
 It shows in systray with PulseAudio icon, right-click to stop,
 play or exit.
 
+Only *Stereo 16-bit 44100 Hz (CD Quality)* is supported.
+
 Build with:
 `go get -ldflags -H=windowsgui -trimpath github.com/StalkR/winpulse`
 
-*Build flags `-ldflags -H=windowsgui` are to avoid a console Window
-since it is a systray app.*
+* `-ldflags -H=windowsgui` are to avoid a console Window since it is
+a systray app. You may still run it in command-line to see the log.
 
-*Build flag `-trimpath` [new in Go 1.13][6] removes all file system
+* `-trimpath` ([new in Go 1.13][6]) is to remove all file system
 paths from the compiled executable, to improve build reproducibility.
 
 Bugs, comments, questions: create a [new issue][5].
