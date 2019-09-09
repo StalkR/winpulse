@@ -186,7 +186,14 @@ func playSSH(ctx context.Context, stream io.Reader, user, host string) error {
 	}
 	log.Print("Connected to PulseAudio")
 	systray.SetTooltip("Connected to PulseAudio")
-	return session.Wait()
+	errc := make(chan error)
+	go func() { errc <- session.Wait() }()
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-errc:
+		return err
+	}
 }
 
 func connectSSH(user, host string) (*ssh.Client, error) {
