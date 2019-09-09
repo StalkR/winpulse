@@ -27,7 +27,6 @@ import (
 	"github.com/getlantern/systray"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -47,10 +46,7 @@ func main() {
 		log.Fatal("invalid user@host[:port]")
 	}
 	ctx := context.Background()
-	systray.Run(
-		func() { onReady(ctx) },
-		func() { os.Exit(0) },
-	)
+	systray.Run(func() { onReady(ctx) }, onExit)
 }
 
 func onReady(ctx context.Context) {
@@ -61,87 +57,64 @@ func onReady(ctx context.Context) {
 	stop.Hide()
 	systray.AddSeparator()
 	exit := systray.AddMenuItem("Exit", "Exit")
-
 	go func() {
 		<-exit.ClickedCh
 		systray.Quit()
 	}()
-
 	for {
+		ctx, cancel := context.WithCancel(ctx)
+		go start(ctx)
+		log.Print("Started")
+		systray.SetTooltip("Started")
 		systray.SetIcon(icon.Color)
 		stop.Show()
-		g, ctx := errgroup.WithContext(ctx)
-		g.Go(func() error {
-			return start(ctx)
-		})
-		g.Go(func() error {
-			select {
-			case <-stop.ClickedCh:
-				return errStop
-			case <-ctx.Done():
-				return nil
-			}
-		})
-		if err := g.Wait(); err != nil && err != errStop {
-			log.Printf("error: %v", err)
-		}
+
+		<-stop.ClickedCh
+		cancel()
 		stop.Hide()
 		log.Print("Stopped")
 		systray.SetTooltip("Stopped")
 		systray.SetIcon(icon.Gray)
 		play.Show()
+
 		<-play.ClickedCh
 		play.Hide()
 	}
 }
 
-func start(ctx context.Context) error {
-	parentCtx := ctx
-	g, ctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		select {
-		case <-parentCtx.Done():
-			return errStop
-		case <-ctx.Done():
-			return nil
-		}
-	})
+func onExit() {
+	log.Print("Exiting")
+	os.Exit(0)
+}
 
+func start(ctx context.Context) {
 	r, w := io.Pipe()
-	g.Go(func() error {
-		defer w.Close()
-		for ; ; time.Sleep(time.Second) {
-			if err := winaudio.Capture(ctx, w); err != nil {
-				log.Printf("error: %v", err)
-			}
-			select {
-			case <-ctx.Done():
-				return nil
-			default:
-			}
-		}
-	})
-
-	g.Go(func() error {
+	go func() {
 		defer r.Close()
 		for ; ; time.Sleep(time.Second) {
 			log.Print("Connecting to PulseAudio...")
-			systray.SetTooltip("Connecting to PulseAudio...")
 			if err := play(ctx, r); err != nil && err != io.EOF {
 				log.Printf("error: %v", err)
 			}
 			select {
 			case <-ctx.Done():
-				return nil
+				return
 			default:
 			}
 		}
-	})
-
-	if err := g.Wait(); err != nil && err != errStop {
-		return err
+	}()
+	defer w.Close()
+	for ; ; time.Sleep(time.Second) {
+		log.Print("Capturing Windows Audio...")
+		if err := winaudio.Capture(ctx, w); err != nil {
+			log.Printf("error: %v", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 	}
-	return nil
 }
 
 var errStop = errors.New("stop")
