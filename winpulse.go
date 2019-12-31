@@ -2,7 +2,7 @@
 
 /*
 Binary winpulse captures Audio from Windows and streams it to a PulseAudio server.
-It can stream with native protocol or over SSH with pacat.
+It can stream over SSH with pacat.
 It shows in systray with PulseAudio icon, right-click to exit.
 Build with `-ldflags -H=windowsgui` to avoid launching a console window.
 */
@@ -15,30 +15,25 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"regexp"
 	"time"
 
 	"github.com/StalkR/winpulse/cygwin"
 	"github.com/StalkR/winpulse/icon"
-	"github.com/StalkR/winpulse/pulseaudio"
 	"github.com/StalkR/winpulse/winaudio"
 	"github.com/getlantern/systray"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
 
-var (
-	flagServer = flag.String("server", "", "PulseAudio server to connect to (host:port).")
-	flagSSH    = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host[:port]).")
-)
+var flagSSH = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host[:port]).")
 
 var sshRE = regexp.MustCompile(`^([^@]*)@(.*)$`) // matches user@host[:port]
 
 func main() {
 	flag.Parse()
-	if *flagServer == "" && *flagSSH == "" {
+	if *flagSSH == "" {
 		flag.PrintDefaults()
 		return
 	}
@@ -120,25 +115,11 @@ func start(ctx context.Context) {
 var errStop = errors.New("stop")
 
 func play(ctx context.Context, stream io.Reader) error {
-	if *flagServer != "" {
-		return playNative(ctx, stream, *flagServer)
-	}
 	userHost := sshRE.FindStringSubmatch(*flagSSH)
 	if len(userHost) == 0 { // verified earlier anyway
 		return fmt.Errorf("invalid user@host[:port]")
 	}
 	return playSSH(ctx, stream, userHost[1], userHost[2])
-}
-
-func playNative(ctx context.Context, stream io.Reader, server string) error {
-	conn, err := net.Dial("tcp", server)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	log.Print("Connected to PulseAudio")
-	systray.SetTooltip("Connected to PulseAudio")
-	return pulseaudio.Play(ctx, conn, stream)
 }
 
 func playSSH(ctx context.Context, stream io.Reader, user, host string) error {

@@ -4,11 +4,9 @@
 
 WinPulse captures Audio from Windows and streams it to a PulseAudio Server.
 
-It can stream with native protocol or over SSH with pacat.
+It can stream over SSH with pacat.
 It shows in systray with PulseAudio icon, right-click to stop,
 play or exit.
-
-Only *Stereo 16-bit 44100 Hz (CD Quality)* is supported.
 
 Build with:
 `go get -ldflags -H=windowsgui -trimpath github.com/StalkR/winpulse`
