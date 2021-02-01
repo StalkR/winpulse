@@ -28,11 +28,11 @@ import (
 )
 
 var (
-	flagSSH      = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host[:port]).")
+	flagSSH      = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host:port).")
 	flagPassword = flag.String("password", "", "SSH password, if not provided will try to find a running Cygwin ssh-agent.")
 )
 
-var sshRE = regexp.MustCompile(`^([^@]*)@(.*)$`) // matches user@host[:port]
+var sshRE = regexp.MustCompile(`^([^@]*)@(.*)$`) // matches user@host:port
 
 func main() {
 	flag.Parse()
@@ -41,7 +41,7 @@ func main() {
 		return
 	}
 	if *flagSSH != "" && !sshRE.MatchString(*flagSSH) {
-		log.Fatal("invalid user@host[:port]")
+		log.Fatal("invalid user@host:port")
 	}
 	ctx := context.Background()
 	systray.Run(func() { onReady(ctx) }, onExit)
@@ -120,7 +120,7 @@ var errStop = errors.New("stop")
 func play(ctx context.Context, stream io.Reader) error {
 	userHost := sshRE.FindStringSubmatch(*flagSSH)
 	if len(userHost) == 0 { // verified earlier anyway
-		return fmt.Errorf("invalid user@host[:port]")
+		return fmt.Errorf("invalid user@host:port")
 	}
 	return playSSH(ctx, stream, userHost[1], userHost[2])
 }
