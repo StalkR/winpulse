@@ -11,8 +11,8 @@ play or exit.
 Build with:
 `go get -ldflags -H=windowsgui -trimpath github.com/StalkR/winpulse`
 
-* `-ldflags -H=windowsgui` are to avoid a console Window since it is
-a systray app. You may still run it in command-line to see the log.
+* `-ldflags -H=windowsgui` is to avoid a console Window since it is
+a systray app
 
 * `-trimpath` ([new in Go 1.13][6]) is to remove all file system
 paths from the compiled executable, to improve build reproducibility.
