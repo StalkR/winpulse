@@ -27,7 +27,10 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-var flagSSH = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host[:port]).")
+var (
+	flagSSH      = flag.String("ssh", "", "PulseAudio server to connect to via SSH + pacat (user@host[:port]).")
+	flagPassword = flag.String("password", "", "SSH password, if not provided will try to find a running Cygwin ssh-agent.")
+)
 
 var sshRE = regexp.MustCompile(`^([^@]*)@(.*)$`) // matches user@host[:port]
 
@@ -151,16 +154,20 @@ func playSSH(ctx context.Context, stream io.Reader, user, host string) error {
 }
 
 func connectSSH(user, host string) (*ssh.Client, error) {
-	ag, err := cygwin.SSHAgent()
-	if err != nil {
-		return nil, err
+	auth := ssh.Password(*flagPassword)
+
+	if *flagPassword == "" {
+		ag, err := cygwin.SSHAgent()
+		if err != nil {
+			return nil, err
+		}
+		defer ag.Close()
+		auth = ssh.PublicKeysCallback(agent.NewClient(ag).Signers)
 	}
-	defer ag.Close()
+
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeysCallback(agent.NewClient(ag).Signers),
-		},
+		User:            user,
+		Auth:            []ssh.AuthMethod{auth},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	return ssh.Dial("tcp", host, config)
