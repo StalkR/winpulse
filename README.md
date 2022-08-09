@@ -1,3 +1,5 @@
+**Project read-only: no longer maintained as I don't need it anymore**
+
 # WinPulse
 
 [![Build Status][1]][2] [![Godoc][3]][4]
