@@ -54,10 +54,10 @@ func launch() error {
 var %s []byte
 
 func init() {
-	%s = decode(compressed_%s)
+	%s = decode(compressed%s)
 }
 
-const compressed_%s = "%s"
+const compressed%s = "%s"
 `, *flagPkg, *flagVar, *flagIn, *flagVar, *flagVar, *flagVar, *flagVar, encoded.String())
 	return out.Close()
 }
